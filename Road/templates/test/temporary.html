@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>账户设置</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .header {
+            background: linear-gradient(to right, #4776E6, #8E54E9);
+            color: white;
+            padding: 30px 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            padding: 20px 40px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(to right, #4776E6, #8E54E9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 36px;
+            margin-right: 20px;
+        }
+        
+        .user-details {
+            flex: 1;
+        }
+        
+        .user-details h2 {
+            font-size: 22px;
+            margin-bottom: 5px;
+        }
+        
+        .user-details p {
+            color: #666;
+            font-size: 15px;
+        }
+        
+        .settings-container {
+            padding: 30px 40px;
+        }
+        
+        .setting-group {
+            margin-bottom: 35px;
+        }
+        
+        .setting-group h3 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #444;
+            display: flex;
+            align-items: center;
+        }
+        
+        .setting-group h3 i {
+            margin-right: 10px;
+            color: #4776E6;
+        }
+        
+        .setting-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #4776E6;
+            transition: all 0.3s ease;
+        }
+        
+        .setting-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        }
+        
+        .setting-card h4 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .setting-card p {
+            color: #666;
+            font-size: 15px;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #4776E6;
+            box-shadow: 0 0 0 3px rgba(71, 118, 230, 0.1);
+        }
+        
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(to right, #4776E6, #8E54E9);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(to right, #3a68d9, #7d49d4);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-danger {
+            background: #ff4757;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #ff2e43;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 71, 87, 0.2);
+        }
+        
+        .btn-secondary {
+            background: #f1f2f6;
+            color: #555;
+        }
+        
+        .btn-secondary:hover {
+            background: #e2e3e7;
+        }
+        
+        .confirmation-dialog {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .dialog-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+        
+        .dialog-content h3 {
+            font-size: 22px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .dialog-content p {
+            color: #666;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        
+        .dialog-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+            align-items: center;
+        }
+        
+        .success-message i {
+            margin-right: 10px;
+            font-size: 20px;
+        }
+        
+        .phone-status {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+        
+        .verified {
+            color: #2ed573;
+            margin-left: 10px;
+            font-weight: 500;
+        }
+        
+        .unverified {
+            color: #ff6b81;
+            margin-left: 10px;
+            font-weight: 500;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 25px;
+            color: #888;
+            font-size: 14px;
+            border-top: 1px solid #eee;
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                padding: 20px;
+            }
+            
+            .user-info {
+                padding: 20px;
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .avatar {
+                margin-right: 0;
+                margin-bottom: 15px;
+            }
+            
+            .settings-container {
+                padding: 20px;
+            }
+            
+            .btn {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            
+            .dialog-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>账户设置</h1>
+            <p>管理您的账户信息和安全设置</p>
+        </div>
+        
+        <div class="user-info">
+            <div class="avatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="user-details">
+                <h2>张小明</h2>
+                <p>zhangxiaoming@example.com</p>
+            </div>
+        </div>
+        
+        <div class="settings-container">
+            <div class="setting-group">
+                <h3><i class="fas fa-mobile-alt"></i> 手机号设置</h3>
+                <div class="setting-card">
+                    <h4>绑定手机号</h4>
+                    <p>绑定手机号可以增强账户安全性，并用于找回密码和接收重要通知。</p>
+                    <div class="phone-status">
+                        <span>当前状态：</span>
+                        <span class="unverified">未绑定</span>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="phone">手机号码</label>
+                        <input type="tel" id="phone" placeholder="请输入您的手机号码">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="verification-code">验证码</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="verification-code" placeholder="请输入验证码" style="flex: 1;">
+                            <button class="btn btn-secondary" id="send-code">发送验证码</button>
+                        </div>
+                    </div>
+                    
+                    <button class="btn btn-primary" id="bind-phone">绑定手机号</button>
+                    
+                    <div class="success-message" id="phone-success">
+                        <i class="fas fa-check-circle"></i> 手机号绑定成功！
+                    </div>
+                </div>
+            </div>
+            
+            <div class="setting-group">
+                <h3><i class="fas fa-lock"></i> 密码设置</h3>
+                <div class="setting-card">
+                    <h4>修改密码</h4>
+                    <p>定期修改密码有助于保护您的账户安全，建议每3个月更换一次密码。</p>
+                    
+                    <div class="form-group">
+                        <label for="current-password">当前密码</label>
+                        <input type="password" id="current-password" placeholder="请输入当前密码">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="new-password">新密码</label>
+                        <input type="password" id="new-password" placeholder="请输入新密码（至少8位）">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="confirm-password">确认新密码</label>
+                        <input type="password" id="confirm-password" placeholder="请再次输入新密码">
+                    </div>
+                    
+                    <button class="btn btn-primary" id="change-password">修改密码</button>
+                    
+                    <div class="success-message" id="password-success">
+                        <i class="fas fa-check-circle"></i> 密码修改成功！
+                    </div>
+                </div>
+            </div>
+            
+            <div class="setting-group">
+                <h3><i class="fas fa-exclamation-triangle"></i> 账户操作</h3>
+                <div class="setting-card">
+                    <h4>注销账户</h4>
+                    <p>注销账户将永久删除您的所有数据，此操作不可恢复。请谨慎操作！</p>
+                    <button class="btn btn-danger" id="delete-account">注销账户</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>© 2023 账户安全中心 | 隐私政策 | 使用条款</p>
+        </div>
+    </div>
+    
+    <div class="confirmation-dialog" id="confirmation-dialog">
+        <div class="dialog-content">
+            <h3>确认注销账户</h3>
+            <p>您确定要永久注销您的账户吗？此操作将删除所有数据且不可恢复。请再次确认您的选择。</p>
+            <div class="dialog-buttons">
+                <button class="btn btn-secondary" id="cancel-delete">取消</button>
+                <button class="btn btn-danger" id="confirm-delete">确认注销</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 获取DOM元素
+        const deleteAccountBtn = document.getElementById('delete-account');
+        const confirmationDialog = document.getElementById('confirmation-dialog');
+        const cancelDeleteBtn = document.getElementById('cancel-delete');
+        const confirmDeleteBtn = document.getElementById('confirm-delete');
+        const sendCodeBtn = document.getElementById('send-code');
+        const bindPhoneBtn = document.getElementById('bind-phone');
+        const changePasswordBtn = document.getElementById('change-password');
+        const phoneSuccess = document.getElementById('phone-success');
+        const passwordSuccess = document.getElementById('password-success');
+        
+        // 注销账户确认对话框
+        deleteAccountBtn.addEventListener('click', () => {
+            confirmationDialog.style.display = 'flex';
+        });
+        
+        // 取消注销
+        cancelDeleteBtn.addEventListener('click', () => {
+            confirmationDialog.style.display = 'none';
+        });
+        
+        // 确认注销
+        confirmDeleteBtn.addEventListener('click', () => {
+            alert('账户注销请求已提交！');
+            confirmationDialog.style.display = 'none';
+        });
+        
+        // 发送验证码
+        sendCodeBtn.addEventListener('click', () => {
+            const phoneInput = document.getElementById('phone');
+            if (!phoneInput.value || !/^1[3-9]\d{9}$/.test(phoneInput.value)) {
+                alert('请输入有效的手机号码！');
+                return;
+            }
+            
+            // 模拟发送验证码
+            sendCodeBtn.disabled = true;
+            let countdown = 60;
+            
+            const timer = setInterval(() => {
+                sendCodeBtn.textContent = `重新发送(${countdown})`;
+                countdown--;
+                
+                if (countdown < 0) {
+                    clearInterval(timer);
+                    sendCodeBtn.disabled = false;
+                    sendCodeBtn.textContent = '发送验证码';
+                }
+            }, 1000);
+            
+            alert('验证码已发送至您的手机，请注意查收！');
+        });
+        
+        // 绑定手机号
+        bindPhoneBtn.addEventListener('click', () => {
+            const phoneInput = document.getElementById('phone');
+            const codeInput = document.getElementById('verification-code');
+            
+            if (!phoneInput.value || !/^1[3-9]\d{9}$/.test(phoneInput.value)) {
+                alert('请输入有效的手机号码！');
+                return;
+            }
+            
+            if (!codeInput.value || codeInput.value.length !== 6) {
+                alert('请输入6位验证码！');
+                return;
+            }
+            
+            // 模拟绑定成功
+            phoneSuccess.style.display = 'flex';
+            document.querySelector('.unverified').textContent = '已绑定';
+            document.querySelector('.unverified').className = 'verified';
+            document.querySelector('.unverified').style.color = '#2ed573';
+            
+            setTimeout(() => {
+                phoneSuccess.style.display = 'none';
+            }, 3000);
+        });
+        
+        // 修改密码
+        changePasswordBtn.addEventListener('click', () => {
+            const currentPassword = document.getElementById('current-password');
+            const newPassword = document.getElementById('new-password');
+            const confirmPassword = document.getElementById('confirm-password');
+            
+            if (!currentPassword.value) {
+                alert('请输入当前密码！');
+                return;
+            }
+            
+            if (!newPassword.value || newPassword.value.length < 8) {
+                alert('新密码长度至少为8位！');
+                return;
+            }
+            
+            if (newPassword.value !== confirmPassword.value) {
+                alert('两次输入的新密码不一致！');
+                return;
+            }
+            
+            // 模拟修改成功
+            passwordSuccess.style.display = 'flex';
+            
+            // 清空表单
+            currentPassword.value = '';
+            newPassword.value = '';
+            confirmPassword.value = '';
+            
+            setTimeout(() => {
+                passwordSuccess.style.display = 'none';
+            }, 3000);
+        });
+    </script>
+</body>
+</html>

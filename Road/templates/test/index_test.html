@@ -801,6 +801,12 @@
             justify-content: space-between;
             margin-top: 20px;
         }
+
+        .accountchange-actions {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
         
         .profile-button {
             padding: 10px 20px;
@@ -935,6 +941,107 @@
                 grid-template-columns: repeat(2, 1fr);
             }
         }
+
+        .setting-group {
+            margin-bottom: 35px;
+        }
+        
+        .setting-group h3 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #444;
+            display: flex;
+            align-items: center;
+        }
+        
+        .setting-group h3 i {
+            margin-right: 10px;
+            color: #4776E6;
+        }
+
+        .setting-card {
+            background: black;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid white;
+            transition: all 0.3s ease;
+        }
+        
+        .setting-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        }
+        
+        .setting-card h4 {
+            font-size: 15px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .setting-card p {
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(to right, #4776E6, #8E54E9);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(to right, #3a68d9, #7d49d4);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-danger {
+            background: #ff4757;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #ff2e43;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 71, 87, 0.2);
+        }
+        
+        .btn-secondary {
+            background: #f1f2f6;
+            color: #555;
+        }
+        
+        .btn-secondary:hover {
+            background: #e2e3e7;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+            align-items: center;
+        }
+        
+        .success-message i {
+            margin-right: 10px;
+            font-size: 20px;
+        }
     </style>
 </head>
 <body>
@@ -1001,14 +1108,11 @@
                         <button class="dropdown-item" id="profileButton">
                             <i class="fas fa-user"></i> 个人主页
                         </button>
-                        <button class="dropdown-item">
+                        <button class="dropdown-item" id="accountchangeButton">
                             <i class="fas fa-cog"></i> 账户设置
                         </button>
-                        <button class="dropdown-item">
-                            <i class="fas fa-history"></i> 对话历史
-                        </button>
                         <div class="dropdown-divider"></div>
-                        <button class="dropdown-item">
+                        <button class="dropdown-item" id="outloginButton">
                             <i class="fas fa-sign-out-alt"></i> 退出登录
                         </button>
                     </div>
@@ -1155,6 +1259,58 @@
                 </form>
             </div>
         </div>
+
+        <div class="modal" id="accountchangeModal">
+            <div class="profile-modal-content">
+                <div class="profile-header">
+                    <h2>账户设置</h2>
+                    <p>管理您的账户信息</p>
+                </div>
+                
+                <div class="setting-group">
+                    <h3><i class="fas fa-lock"></i> 密码设置</h3>
+                    <div class="setting-card">
+                        <h4>修改密码</h4>
+                        <p>定期修改密码有助于保护您的账户安全，建议每3个月更换一次密码。</p>
+                        
+                        <div class="form-group">
+                            <label for="current-password">当前密码</label>
+                            <input type="password" id="current-password" placeholder="请输入当前密码">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="new-password">新密码</label>
+                            <input type="password" id="new-password" placeholder="请输入新密码（至少8位）">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="confirm-password">确认新密码</label>
+                            <input type="password" id="confirm-password" placeholder="请再次输入新密码">
+                        </div>
+                        
+                        <button class="btn btn-primary" id="change-password">修改密码</button>
+                        
+                        <div class="success-message" id="password-success" style="display: none;">
+                            <i class="fas fa-check-circle"></i> 密码修改成功！
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <h3><i class="fas fa-exclamation-triangle"></i> 账户操作</h3>
+                    <div class="setting-card">
+                        <h4>注销账户</h4>
+                        <p>注销账户将永久删除您的所有数据，此操作不可恢复。请谨慎操作！</p>
+                        <button class="btn btn-danger" id="delete-account">注销账户</button>
+                    </div>
+                </div>
+
+                <div class="accountchange-actions">
+                    <button type="button" class="profile-button cancel" id="cancelAccountchange">返回</button>
+                </div>
+
+            </div>
+        </div>
     </div>
 
     <script>
@@ -1183,7 +1339,10 @@
         const userEmail = document.getElementById('userEmail');
         const userDropdown = document.getElementById('userDropdown');
         const profileButton = document.getElementById('profileButton');
+        const accountchangeButton = document.getElementById('accountchangeButton');
+        const outloginButton = document.getElementById('outloginButton');
         const profileModal = document.getElementById('profileModal');
+        const accountchangeModal = document.getElementById('accountchangeModal');
         const profileAvatar = document.getElementById('profileAvatar');
         const avatarUpload = document.getElementById('avatarUpload');
         const avatarInput = document.getElementById('avatarInput');
@@ -1192,6 +1351,10 @@
         const userBio = document.getElementById('userBio');
         const profileForm = document.getElementById('profileForm');
         const cancelProfile = document.getElementById('cancelProfile');
+        const cancelAccountchange = document.getElementById('cancelAccountchange');
+        const changePasswordBtn = document.getElementById('change-password');
+        const passwordSuccess = document.getElementById('password-success');
+        const deleteAccount = document.getElementById('delete-account'); 
         
         // 全局变量
         let apiKey = localStorage.getItem('openai-api-key') || '';
@@ -1454,13 +1617,23 @@
             return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
         }
         
-        async function sendRequest(location) {
+        async function sendRequest(location, newPassword=null, oldPassword=null) {
             var name = '';
             if (location=='/userInput'){
                 name = document.getElementById('userInput').value || 'null';
             }
             if (location=='/dislike_reply'){
                 name =  conversationHistory || 'null';
+            }
+            if (location=='/change_password'){
+                const urlParams = new URLSearchParams(window.location.search);
+                const get_name = urlParams.get('name');
+                name = get_name;
+            }
+            if (location=='/delete_account'){
+                const urlParams = new URLSearchParams(window.location.search);
+                const get_name = urlParams.get('name');
+                name = get_name;
             }
             try {
                 // 发送POST请求到后端API
@@ -1469,10 +1642,24 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ name: name })
+                    body: JSON.stringify({ name: name, oldPassword: oldPassword, newPassword: newPassword})
                 });
 
                 const data = await response.json();
+
+                if (location=='/change_password'){
+                    if (data.success){
+                    passwordSuccess.style.display = 'flex';
+                    }
+                }
+
+                if (location=='/delete_account'){
+                    if (data.success){
+                        alert('账户已注销！');
+                        window.location.href = `/`;
+
+                    }
+                }
             } catch (error) {
                 console.error(`路由${location}出错！`)
             }
@@ -1715,10 +1902,21 @@
             userDropdown.classList.remove('show');
             profileModal.classList.add('show');
         });
+
+        // 打开用户设置
+        accountchangeButton.addEventListener('click', () => {
+            userDropdown.classList.remove('show');
+            accountchangeModal.classList.add('show');
+        });
         
         // 关闭用户主页
         cancelProfile.addEventListener('click', () => {
             profileModal.classList.remove('show');
+        });
+
+        // 关闭用户设置
+        cancelAccountchange.addEventListener('click', () => {
+            accountchangeModal.classList.remove('show');
         });
         
         // 头像上传
@@ -1756,6 +1954,70 @@
             
             // 关闭模态框
             profileModal.classList.remove('show');
+        });
+
+        // 修改密码
+        changePasswordBtn.addEventListener('click', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const get_password = urlParams.get('password');
+            const get_name = urlParams.get('name');
+            const currentPassword = document.getElementById('current-password');
+            const newPassword = document.getElementById('new-password');
+            const confirmPassword = document.getElementById('confirm-password');
+
+            if (!currentPassword.value) {
+                alert('请输入当前密码！');
+                return;
+            }
+            if (currentPassword.value != get_password){
+                alert('原密码不正确!');
+                return;
+            }
+            
+            if (!newPassword.value || newPassword.value.length < 8) {
+                alert('新密码长度至少为8位！');
+                return;
+            }
+            
+            if (newPassword.value !== confirmPassword.value) {
+                alert('两次输入的新密码不一致！');
+                return;
+            }
+
+            sendRequest('/change_password', newPassword.value, currentPassword.value);
+
+            setTimeout(() => {
+                // 清空表单
+                currentPassword.value = '';
+                newPassword.value = '';
+                confirmPassword.value = '';
+                passwordSuccess.style.display = 'none';
+                // 当前页面传递参数
+                const params = {
+                name: get_name
+                };
+                // 转义参数值并构建查询字符串
+                const queryString = new URLSearchParams(params).toString();
+                window.location.href = `/?${queryString}`;
+            }, 3000);
+
+        });
+
+        // 注销账户
+        deleteAccount.addEventListener('click', () => {
+            sendRequest('/delete_account');
+        });
+
+        // 退出登录
+        outloginButton.addEventListener('click', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const get_name = urlParams.get('name');
+            const params = {
+                name: get_name
+            };
+            const queryString = new URLSearchParams(params).toString();
+            window.location.href = `/?${queryString}`;
+            alert('确定退出登录？');
         });
         
         // 初始化应用

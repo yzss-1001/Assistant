@@ -1,9 +1,12 @@
-with open('txt/user/user_information', 'r+') as file:  # 检查登录信息在user_information中是否存在
-    existing_content = file.read()
-    sub_body = existing_content.split(';;')  # 多个用户信息
-    login_user_body = f"\nusername:test_01\npassword:test"
-    for i in sub_body:
-        if login_user_body in i:
-            sub02_body = i.split('\n')
-            email = sub02_body[4][6:]
-            print(email)
+with open('txt/user/user_information.txt', 'r', encoding='utf-8') as file:
+    content = file.read()
+sub_body = content.split(';;')
+deleted_sub_body = []
+for i in sub_body:
+    if 'username:test\n' not in i:
+        deleted_sub_body.append(i)
+
+new_content = ";;".join(deleted_sub_body)
+print(new_content)
+with open('txt/user/user_information_test.txt', 'w', encoding='utf-8') as file:
+    file.write(new_content)

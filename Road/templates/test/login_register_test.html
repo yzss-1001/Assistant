@@ -465,6 +465,11 @@
     </div>
     
     <script>
+        // 接收重定向的参数
+        const urlParams = new URLSearchParams(window.location.search);
+        const get_name = urlParams.get('name');
+        const username = document.getElementById('login-username');
+        username.value = get_name
         // 登录注册切换
         const panels = document.querySelectorAll('.panel');
         const forms = document.querySelectorAll('.form');
@@ -569,7 +574,8 @@
                         // 当前页面传递参数
                         const params = {
                         name: response.user,
-                        email: response.email
+                        email: response.email,
+                        password: response.password
                         };
                         // 转义参数值并构建查询字符串
                         const queryString = new URLSearchParams(params).toString();
