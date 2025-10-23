@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多模态人机交流界面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .chat-container {
+            width: 100%;
+            max-width: 900px;
+            height: 80vh;
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(90deg, #4b6cb7 0%, #182848 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        .header p {
+            margin-top: 5px;
+            opacity: 0.8;
+            font-size: 14px;
+        }
+        
+        .chat-area {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .message {
+            max-width: 80%;
+            padding: 15px;
+            border-radius: 18px;
+            line-height: 1.5;
+            position: relative;
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .user-message {
+            align-self: flex-end;
+            background-color: #4b6cb7;
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+        
+        .ai-message {
+            align-self: flex-start;
+            background-color: #f0f2f5;
+            color: #333;
+            border-bottom-left-radius: 5px;
+        }
+        
+        .message-time {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 5px;
+            text-align: right;
+        }
+        
+        .input-area {
+            padding: 20px;
+            border-top: 1px solid #e0e0e0;
+            background-color: #f9f9f9;
+        }
+        
+        .input-tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab.active {
+            color: #4b6cb7;
+            border-bottom: 3px solid #4b6cb7;
+        }
+        
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .text-input {
+            flex: 1;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            resize: none;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        .text-input:focus {
+            border-color: #4b6cb7;
+        }
+        
+        .send-button {
+            background: linear-gradient(90deg, #4b6cb7 0%, #182848 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 0 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        
+        .send-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .send-button:active {
+            transform: translateY(0);
+        }
+        
+        .send-button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .file-input-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .file-input-label {
+            padding: 10px 15px;
+            background-color: #e9ecef;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .preview-image {
+            max-width: 150px;
+            max-height: 150px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        
+        .voice-input-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .voice-button {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #4b6cb7;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            font-size: 20px;
+        }
+        
+        .voice-button.recording {
+            background-color: #e74c3c;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .voice-visualizer {
+            width: 200px;
+            height: 40px;
+            background-color: #f0f2f5;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+        }
+        
+        .voice-bar {
+            width: 6px;
+            height: 20px;
+            background-color: #4b6cb7;
+            margin: 0 2px;
+            border-radius: 3px;
+            transition: height 0.2s;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #4b6cb7;
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+        
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+        
+        .error-message {
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #ffeaea;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .api-config {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #f0f8ff;
+            border-radius: 8px;
+            border: 1px solid #c3d9ff;
+        }
+        
+        .api-config h3 {
+            margin-bottom: 10px;
+            color: #4b6cb7;
+            font-size: 16px;
+        }
+        
+        .config-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .config-button {
+            background-color: #4b6cb7;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 768px) {
+            .chat-container {
+                height: 90vh;
+            }
+            
+            .message {
+                max-width: 90%;
+            }
+            
+            .input-container {
+                flex-direction: column;
+            }
+            
+            .send-button {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="header">
+            <h1>多模态人机交流</h1>
+            <p>支持文本、图像和语音输入，与AI进行自然对话</p>
+        </div>
+        
+        <div class="chat-area" id="chatArea">
+            <div class="message ai-message">
+                <div>您好！我是您的AI助手，支持文本、图像和语音交流。请问有什么可以帮助您的吗？</div>
+                <div class="message-time">刚刚</div>
+            </div>
+        </div>
+        
+        <div class="input-area">
+            <div class="input-tabs">
+                <div class="tab active" data-tab="text">文本输入</div>
+                <div class="tab" data-tab="image">图像输入</div>
+                <div class="tab" data-tab="voice">语音输入</div>
+            </div>
+            
+            <!-- 文本输入区域 -->
+            <div class="tab-content active" id="text-tab">
+                <div class="input-container">
+                    <textarea class="text-input" id="textInput" placeholder="请输入您的问题..."></textarea>
+                    <button class="send-button" id="sendTextBtn">发送</button>
+                </div>
+            </div>
+            
+            <!-- 图像输入区域 -->
+            <div class="tab-content" id="image-tab">
+                <div class="file-input-container">
+                    <label for="imageInput" class="file-input-label">
+                        <span>选择图像</span>
+                    </label>
+                    <input type="file" id="imageInput" class="file-input" accept="image/*">
+                    <span id="imageFileName">未选择文件</span>
+                </div>
+                <div id="imagePreview"></div>
+                <div class="input-container">
+                    <textarea class="text-input" id="imageTextInput" placeholder="关于这张图片，您有什么想问的？"></textarea>
+                    <button class="send-button" id="sendImageBtn">发送</button>
+                </div>
+            </div>
+            
+            <!-- 语音输入区域 -->
+            <div class="tab-content" id="voice-tab">
+                <div class="voice-input-container">
+                    <button class="voice-button" id="voiceButton">
+                        <i>🎤</i>
+                    </button>
+                    <div class="voice-visualizer" id="voiceVisualizer">
+                        <!-- 语音可视化条将通过JS动态生成 -->
+                    </div>
+                </div>
+                <div class="input-container">
+                    <textarea class="text-input" id="voiceTextInput" placeholder="语音识别结果将显示在这里..." readonly></textarea>
+                    <button class="send-button" id="sendVoiceBtn">发送</button>
+                </div>
+            </div>
+            
+            <div class="status-indicator" id="statusIndicator">
+                <span>AI正在思考</span>
+                <div class="typing-indicator">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+            
+            <div class="error-message" id="errorMessage"></div>
+            
+            <!-- API配置区域 -->
+            <div class="api-config">
+                <h3>API配置</h3>
+                <input type="text" class="config-input" id="apiEndpoint" placeholder="API端点 (例如: http://localhost:8000/api/chat/)">
+                <button class="config-button" id="saveConfigBtn">保存配置</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 获取DOM元素
+        const chatArea = document.getElementById('chatArea');
+        const textInput = document.getElementById('textInput');
+        const sendTextBtn = document.getElementById('sendTextBtn');
+        const imageInput = document.getElementById('imageInput');
+        const imagePreview = document.getElementById('imagePreview');
+        const imageFileName = document.getElementById('imageFileName');
+        const imageTextInput = document.getElementById('imageTextInput');
+        const sendImageBtn = document.getElementById('sendImageBtn');
+        const voiceButton = document.getElementById('voiceButton');
+        const voiceVisualizer = document.getElementById('voiceVisualizer');
+        const voiceTextInput = document.getElementById('voiceTextInput');
+        const sendVoiceBtn = document.getElementById('sendVoiceBtn');
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const errorMessage = document.getElementById('errorMessage');
+        const apiEndpointInput = document.getElementById('apiEndpoint');
+        const saveConfigBtn = document.getElementById('saveConfigBtn');
+        
+        // API配置
+        let API_ENDPOINT = 'http://localhost:8000/api/chat/';
+        
+        // 从本地存储加载配置
+        function loadConfig() {
+            const savedEndpoint = localStorage.getItem('apiEndpoint');
+            
+            if (savedEndpoint) {
+                API_ENDPOINT = savedEndpoint;
+                apiEndpointInput.value = savedEndpoint;
+            }
+        }
+        
+        // 保存配置
+        saveConfigBtn.addEventListener('click', () => {
+            API_ENDPOINT = apiEndpointInput.value.trim();
+            localStorage.setItem('apiEndpoint', API_ENDPOINT);
+            showMessage('配置已保存！', 'success');
+        });
+        
+        // 初始化语音可视化条
+        function initVoiceVisualizer() {
+            voiceVisualizer.innerHTML = '';
+            for (let i = 0; i < 20; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'voice-bar';
+                bar.style.height = '5px';
+                voiceVisualizer.appendChild(bar);
+            }
+        }
+        
+        initVoiceVisualizer();
+        loadConfig();
+        
+        // 标签切换功能
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabId = tab.getAttribute('data-tab');
+                
+                // 更新标签状态
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                // 更新内容区域
+                tabContents.forEach(content => {
+                    content.classList.remove('active');
+                    if (content.id === `${tabId}-tab`) {
+                        content.classList.add('active');
+                    }
+                });
+            });
+        });
+        
+        // 添加消息到聊天区域
+        function addMessage(content, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
+            
+            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            messageDiv.innerHTML = `
+                <div>${content}</div>
+                <div class="message-time">${time}</div>
+            `;
+            
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+        
+        // 显示消息
+        function showMessage(message, type = 'info') {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            
+            if (type === 'success') {
+                errorMessage.style.backgroundColor = '#e8f5e8';
+                errorMessage.style.color = '#2e7d32';
+            } else {
+                errorMessage.style.backgroundColor = '#ffeaea';
+                errorMessage.style.color = '#e74c3c';
+            }
+            
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 3000);
+        }
+        
+        // 调用AI语言模型API
+        async function callLanguageModel(message, messageType = 'text', imageFile = null) {
+            try {
+                // 显示思考状态
+                statusIndicator.style.display = 'flex';
+                setSendButtonsDisabled(true);
+                
+                // 创建FormData对象，支持文件上传
+                const formData = new FormData();
+                formData.append('message', message);
+                formData.append('message_type', messageType);
+                
+                // 如果有图像文件，添加到FormData
+                if (imageFile) {
+                    formData.append('image', imageFile);
+                }
+                
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API请求失败: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // 隐藏思考状态
+                statusIndicator.style.display = 'none';
+                setSendButtonsDisabled(false);
+                
+                return data.response || data.message || '抱歉，我暂时无法回答这个问题。';
+            } catch (error) {
+                console.error('调用AI API时出错:', error);
+                statusIndicator.style.display = 'none';
+                setSendButtonsDisabled(false);
+                
+                // 如果API调用失败，使用模拟响应
+                return simulateAIResponse(message, messageType);
+            }
+        }
+        
+        // 设置发送按钮的禁用状态
+        function setSendButtonsDisabled(disabled) {
+            sendTextBtn.disabled = disabled;
+            sendImageBtn.disabled = disabled;
+            sendVoiceBtn.disabled = disabled;
+        }
+        
+        // 模拟AI响应（备用方案）
+        function simulateAIResponse(userMessage, messageType = 'text') {
+            let response = '';
+            
+            if (messageType === 'text') {
+                if (userMessage.includes('你好') || userMessage.includes('您好')) {
+                    response = '您好！很高兴与您交流。有什么我可以帮助您的吗？';
+                } else if (userMessage.includes('天气')) {
+                    response = '我无法获取实时天气信息，但您可以通过天气应用或网站查询最新天气情况。';
+                } else if (userMessage.includes('名字')) {
+                    response = '我是您的AI助手，您可以叫我小智。';
+                } else {
+                    response = `感谢您的提问。关于"${userMessage}"，我理解您的问题，但目前我无法提供具体的答案。您可以尝试更详细地描述您的问题，我会尽力帮助您。`;
+                }
+            } else if (messageType === 'image') {
+                response = '我已经收到了您上传的图片。从视觉内容来看，这似乎是一张不错的图片。如果您有关于这张图片的具体问题，我很乐意帮助分析。';
+            } else if (messageType === 'voice') {
+                response = '我已经听到了您的语音消息。您的声音很清晰。请问您需要我帮助您解决什么问题？';
+            }
+            
+            return response;
+        }
+        
+        // 文本发送功能
+        sendTextBtn.addEventListener('click', async () => {
+            const message = textInput.value.trim();
+            if (message) {
+                addMessage(message, true);
+                textInput.value = '';
+                
+                try {
+                    const aiResponse = await callLanguageModel(message, 'text');
+                    addMessage(aiResponse, false);
+                } catch (error) {
+                    console.error('发送消息时出错:', error);
+                    showMessage('发送消息失败: ' + error.message);
+                }
+            }
+        });
+        
+        textInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendTextBtn.click();
+            }
+        });
+        
+        // 图像上传和预览功能
+        let currentImageFile = null;
+        
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                currentImageFile = file;
+                imageFileName.textContent = file.name;
+                
+                // 清除之前的预览
+                imagePreview.innerHTML = '';
+                
+                // 创建图像预览
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = document.createElement('img');
+                    img.src = event.target.result;
+                    img.className = 'preview-image';
+                    imagePreview.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // 图像发送功能
+        sendImageBtn.addEventListener('click', async () => {
+            const message = imageTextInput.value.trim();
+            if (currentImageFile || message) {
+                let content = '';
+                if (currentImageFile) {
+                    content += '[图片] ';
+                }
+                if (message) {
+                    content += message;
+                }
+                
+                addMessage(content, true);
+                
+                try {
+                    const aiResponse = await callLanguageModel(
+                        message || '分析这张图片', 
+                        'image', 
+                        currentImageFile
+                    );
+                    addMessage(aiResponse, false);
+                } catch (error) {
+                    console.error('发送图像消息时出错:', error);
+                    showMessage('发送图像消息失败: ' + error.message);
+                }
+                
+                // 清空输入
+                imageTextInput.value = '';
+                imagePreview.innerHTML = '';
+                imageFileName.textContent = '未选择文件';
+                imageInput.value = '';
+                currentImageFile = null;
+            }
+        });
+        
+        // 语音输入功能
+        let isRecording = false;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        
+        voiceButton.addEventListener('click', () => {
+            if (!isRecording) {
+                // 开始录音
+                startRecording();
+            } else {
+                // 停止录音
+                stopRecording();
+            }
+        });
+        
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+                
+                mediaRecorder.onstop = () => {
+                    // 创建音频Blob
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    
+                    // 模拟语音识别结果
+                    const simulatedText = "这是模拟的语音识别结果。在实际应用中，这里会是真实的语音转文本。";
+                    voiceTextInput.value = simulatedText;
+                    
+                    // 停止所有音轨
+                    stream.getTracks().forEach(track => track.stop());
+                };
+                
+                mediaRecorder.start();
+                isRecording = true;
+                voiceButton.classList.add('recording');
+                
+                // 模拟语音可视化效果
+                simulateVoiceVisualization();
+            } catch (error) {
+                console.error('无法访问麦克风:', error);
+                showMessage('无法访问麦克风，请检查权限设置。');
+            }
+        }
+        
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                voiceButton.classList.remove('recording');
+                
+                // 停止语音可视化
+                clearInterval(visualizationInterval);
+                resetVoiceVisualizer();
+            }
+        }
+        
+        // 语音可视化效果
+        let visualizationInterval;
+        
+        function simulateVoiceVisualization() {
+            resetVoiceVisualizer();
+            
+            visualizationInterval = setInterval(() => {
+                const bars = voiceVisualizer.querySelectorAll('.voice-bar');
+                bars.forEach(bar => {
+                    const height = Math.floor(Math.random() * 30) + 5;
+                    bar.style.height = `${height}px`;
+                });
+            }, 100);
+        }
+        
+        function resetVoiceVisualizer() {
+            const bars = voiceVisualizer.querySelectorAll('.voice-bar');
+            bars.forEach(bar => {
+                bar.style.height = '5px';
+            });
+        }
+        
+        // 语音发送功能
+        sendVoiceBtn.addEventListener('click', async () => {
+            const message = voiceTextInput.value.trim();
+            if (message) {
+                addMessage(`[语音] ${message}`, true);
+                voiceTextInput.value = '';
+                
+                try {
+                    const aiResponse = await callLanguageModel(message, 'voice');
+                    addMessage(aiResponse, false);
+                } catch (error) {
+                    console.error('发送语音消息时出错:', error);
+                    showMessage('发送语音消息失败: ' + error.message);
+                }
+            }
+        });
+        
+        // 初始化状态指示器
+        statusIndicator.style.display = 'none';
+    </script>
+</body>
+</html>

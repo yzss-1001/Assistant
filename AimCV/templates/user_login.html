@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户登录</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            padding: 20px;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 40px 30px;
+            transition: transform 0.3s ease;
+        }
+
+        .login-container:hover {
+            transform: translateY(-5px);
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .login-header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .login-header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 15px 15px 15px 45px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background-color: #f9f9f9;
+        }
+
+        .input-group input:focus {
+            border-color: #4a7dff;
+            box-shadow: 0 0 0 2px rgba(74, 125, 255, 0.2);
+            outline: none;
+            background-color: #fff;
+        }
+
+        .input-group i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #777;
+        }
+
+        .remember-forgot {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+        }
+
+        .remember-me input {
+            margin-right: 8px;
+        }
+
+        .forgot-password {
+            color: #4a7dff;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .forgot-password:hover {
+            color: #2d5bd6;
+            text-decoration: underline;
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(to right, #4a7dff, #6a11cb);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .login-button:hover {
+            background: linear-gradient(to right, #3a6de8, #5a0fb8);
+            box-shadow: 0 5px 15px rgba(106, 17, 203, 0.4);
+        }
+
+        .login-button:active {
+            transform: scale(0.98);
+        }
+
+        .signup-link {
+            text-align: center;
+            margin-top: 25px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .signup-link a {
+            color: #4a7dff;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .signup-link a:hover {
+            color: #2d5bd6;
+            text-decoration: underline;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .success-message {
+            color: #2ecc71;
+            font-size: 14px;
+            margin-top: 10px;
+            text-align: center;
+            display: none;
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 30px 20px;
+            }
+
+            .login-header h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="login-container">
+    <div class="login-header">
+        <h1>欢迎回来</h1>
+        <p>请输入您的账号信息进行登录</p>
+    </div>
+
+    <form id="loginForm">
+        {% csrf_token %}
+        <div class="input-group">
+            <i>👤</i>
+            <input type="text" id="username" name="username" placeholder="用户名" required>
+            <div class="error-message" id="usernameError">请输入有效的用户名</div>
+        </div>
+
+        <div class="input-group">
+            <i>🔒</i>
+            <input type="password" id="password" name="password" placeholder="密码" required>
+            <div class="error-message" id="passwordError">密码不能为空</div>
+        </div>
+
+        <div class="remember-forgot">
+            <label class="remember-me">
+                <input type="checkbox" id="remember" name="remember">
+                <span>记住我</span>
+            </label>
+            <a href="#" class="forgot-password">忘记密码?</a>
+        </div>
+
+        <button type="submit" class="login-button">登录</button>
+
+        <div class="success-message" id="successMessage">登录成功！</div>
+
+        <div class="signup-link">
+            还没有账号? <a href="http://localhost:8000/user_register/">立即注册</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const params = getUrlParams();
+        if (params.username) {
+            document.getElementById('username').value = params.username;
+        }
+    });
+
+
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const usernameError = document.getElementById('usernameError');
+        const passwordError = document.getElementById('passwordError');
+        const successMessage = document.getElementById('successMessage');
+
+        let isValid = true;
+
+        // 用户名验证
+        if (username.trim() === '') {
+            usernameError.style.display = 'block';
+            isValid = false;
+        } else {
+            usernameError.style.display = 'none';
+        }
+
+        // 密码验证
+        if (password.trim() === '') {
+            passwordError.style.display = 'block';
+            isValid = false;
+        } else {
+            passwordError.style.display = 'none';
+        }
+
+        // 如果验证通过，发送POST请求到Django后端
+        if (isValid) {
+            // 获取CSRF令牌
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            // 创建FormData对象
+            const formData = new FormData();
+            formData.append('username', username);
+            formData.append('password', password);
+
+            // 发送POST请求
+            fetch('http://localhost:8000/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                },
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络响应不正常');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    successMessage.style.display = 'block';
+                    successMessage.textContent = data.message;
+                    // 登录成功后的操作，例如页面跳转
+                    setTimeout(() => {
+                        window.location.href = data.redirect_url || 'http://localhost:8000/camera_app/';
+                    }, 1500);
+                } else {
+                    usernameError.textContent = data.message || '登录失败，请检查用户名和密码';
+                    usernameError.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('错误:', error);
+                usernameError.textContent = '登录请求失败，请稍后重试';
+                usernameError.style.display = 'block';
+            });
+        }
+    });
+
+
+    function getUrlParams() {
+        const params = {};
+        const queryString = window.location.search.substring(1);
+        const pairs = queryString.split('&');
+        for (let i = 0; i < pairs.length; i++) {
+            const pair = pairs[i].split('=');
+            if (pair[0]) {
+                params[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || '');
+            }
+        }
+        return params;
+    }
+</script>
+</body>
+</html>

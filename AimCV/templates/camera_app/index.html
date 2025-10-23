@@ -1,0 +1,834 @@
+<!-- templates/camera_app/index.html -->
+{% extends "base.html" %}
+
+{% block title %}摄像头监控 - Django{% endblock %}
+
+{% block content %}
+<div class="status-bar">
+    <div>
+        <strong>摄像头状态:</strong>
+        <span class="status-indicator">
+            <span id="statusDot" class="status-dot"></span>
+            <span id="statusText">未连接</span>
+        </span>
+    </div>
+    <div id="connectionInfo">
+        <strong>帧率:</strong> <span id="fpsCounter">0</span> FPS
+    </div>
+    <!-- 检测状态显示 -->
+    <div id="detectionInfo">
+        <strong>目标检测:</strong> 
+        <span id="detectionStatusText">未开启</span>
+    </div>
+    <!-- 新增：自动保存状态显示 -->
+    <div id="autoSaveInfo">
+        <strong>自动保存:</strong> 
+        <span id="autoSaveStatusText">未开启</span>
+    </div>
+</div>
+
+<div class="video-container">
+    <img id="videoFeed" src="{% url 'video_feed' %}" alt="实时视频流" style="display: none;">
+    <div id="videoPlaceholder" class="video-placeholder">
+        <div style="text-align: center;">
+            <div style="font-size: 3em; margin-bottom: 10px;">📷</div>
+            <div>摄像头未启动</div>
+            <div style="font-size: 0.9em; opacity: 0.8; margin-top: 5px;">点击"启动摄像头"开始监控</div>
+        </div>
+    </div>
+</div>
+
+<div class="controls">
+    <button id="startBtn" class="btn btn-start" onclick="startCamera()">
+        <span>▶</span> 启动摄像头
+    </button>
+    <button id="stopBtn" class="btn btn-stop" onclick="stopCamera()" disabled>
+        <span>⏹</span> 停止摄像头
+    </button>
+    <button id="snapshotBtn" class="btn btn-snapshot" onclick="takeSnapshot()" disabled>
+        <span>📸</span> 拍摄快照
+    </button>
+    <!-- 目标检测控制按钮 -->
+    <button id="toggleDetection" class="btn btn-warning" onclick="toggleDetection()" disabled>
+        <span>🔍</span> 开启
+    </button>
+    <button id="detectionStatusBtn" class="btn btn-info" onclick="checkDetectionStatus()" disabled>
+        <span>ℹ️</span> 检测状态
+    </button>
+    <!-- 新增：自动保存控制按钮 -->
+    <button id="toggleAutoSave" class="btn btn-success" onclick="toggleAutoSave()" disabled>
+        <span>💾</span> 开启自动保存
+    </button>
+    <button id="fullscreenBtn" class="btn btn-fullscreen" onclick="toggleFullscreen()">
+        <span>⛶</span> 全屏显示
+    </button>
+</div>
+
+<!-- 检测控制面板 -->
+<div class="control-panel" id="controlPanel" style="display: none;">
+    <h3>⚙️ 检测设置</h3>
+    <div class="panel-content">
+        <div class="setting-group">
+            <label for="saveInterval">保存间隔:</label>
+            <input type="number" id="saveInterval" value="2" min="1" max="10" class="interval-input">
+            <span>秒</span>
+            <button class="btn btn-small" onclick="setSaveInterval()">应用</button>
+        </div>
+        <div class="stats-group">
+            <div class="stat-item">
+                <strong>检测计数:</strong> <span id="detectionCount">0</span>
+            </div>
+            <div class="stat-item">
+                <strong>已保存图片:</strong> <span id="savedCount">0</span>
+            </div>
+            <div class="stat-item">
+                <strong>模型状态:</strong> <span id="modelStatus">加载中...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 检测结果显示区域 -->
+<div class="detection-results" id="detectionResults" style="display: none;">
+    <h3>🎯 实时检测结果</h3>
+    <div id="detectionInfoContainer">
+        <div class="detection-stats">
+            <div>检测对象: <span id="detectedObjects">0</span></div>
+            <div>置信度: <span id="detectionConfidence">0%</span></div>
+            <div>自动保存: <span id="autoSaveIndicator">❌</span></div>
+        </div>
+    </div>
+</div>
+
+<div class="snapshots">
+    <h3>📁 快照记录</h3>
+    <div id="snapshotContainer">
+        <!-- 快照将在这里动态显示 -->
+    </div>
+</div>
+
+<!-- 新增：自动保存图片区域 -->
+<div class="saved-images">
+    <h3>🖼️ 自动保存的检测图片</h3>
+    <div class="saved-header">
+        <div class="saved-stats">
+            共 <span id="totalSavedCount">0</span> 张图片
+            <button class="btn btn-small" onclick="refreshSavedImages()">🔄 刷新</button>
+            <button class="btn btn-small btn-danger" onclick="clearAllSavedImages()" style="display: none;">🗑️ 清空全部</button>
+        </div>
+    </div>
+    <div id="savedImagesContainer" class="saved-images-container">
+        <!-- 自动保存的图片将在这里显示 -->
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let isCameraRunning = false;
+    let isDetectionEnabled = false;
+    let isAutoSaveEnabled = false;
+    let frameCount = 0;
+    let fps = 0;
+    let lastTime = Date.now();
+    let snapshotKeys = new Set();
+
+    // 更新状态显示
+    function updateStatus(isRunning, hasFrame = false) {
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const videoFeed = document.getElementById('videoFeed');
+        const videoPlaceholder = document.getElementById('videoPlaceholder');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const snapshotBtn = document.getElementById('snapshotBtn');
+        const toggleDetectionBtn = document.getElementById('toggleDetection');
+        const detectionStatusBtn = document.getElementById('detectionStatusBtn');
+        const toggleAutoSaveBtn = document.getElementById('toggleAutoSave');
+        const controlPanel = document.getElementById('controlPanel');
+
+        isCameraRunning = isRunning;
+
+        if (isRunning) {
+            statusDot.className = 'status-dot active';
+            statusText.textContent = hasFrame ? '运行中' : '连接中...';
+            videoFeed.style.display = hasFrame ? 'block' : 'none';
+            videoPlaceholder.style.display = hasFrame ? 'none' : 'flex';
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            snapshotBtn.disabled = !hasFrame;
+            toggleDetectionBtn.disabled = !hasFrame;
+            detectionStatusBtn.disabled = !hasFrame;
+            toggleAutoSaveBtn.disabled = !hasFrame;
+            
+            // 显示控制面板
+            if (hasFrame) {
+                controlPanel.style.display = 'block';
+            }
+        } else {
+            statusDot.className = 'status-dot';
+            statusText.textContent = '未连接';
+            videoFeed.style.display = 'none';
+            videoPlaceholder.style.display = 'flex';
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            snapshotBtn.disabled = true;
+            toggleDetectionBtn.disabled = true;
+            detectionStatusBtn.disabled = true;
+            toggleAutoSaveBtn.disabled = true;
+            controlPanel.style.display = 'none';
+        }
+    }
+
+    // 启动摄像头
+    async function startCamera() {
+        try {
+            updateStatus(true, false);
+
+            const response = await fetch('{% url "start_camera" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ camera_index: 0 })
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                showToast('摄像头启动成功');
+                // 开始检查状态
+                checkCameraStatus();
+                // 检查检测状态
+                checkDetectionStatus();
+                // 加载已保存的图片
+                loadSavedImages();
+            } else {
+                throw new Error(data.message);
+            }
+        } catch (error) {
+            console.error('启动摄像头失败:', error);
+            showToast('启动失败: ' + error.message, true);
+            updateStatus(false);
+        }
+    }
+
+    // 停止摄像头
+    async function stopCamera() {
+        try {
+            const response = await fetch('{% url "stop_camera" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                showToast('摄像头已停止');
+                updateStatus(false);
+                // 重置检测状态
+                isDetectionEnabled = false;
+                isAutoSaveEnabled = false;
+                updateDetectionStatus(false);
+                updateAutoSaveStatus(false);
+            } else {
+                throw new Error(data.message);
+            }
+        } catch (error) {
+            // console.error('停止摄像头失败:', error);
+            // showToast('停止失败: ' + error.message, true);
+        }
+    }
+
+    // 拍摄快照
+    async function takeSnapshot() {
+        try {
+            const response = await fetch('{% url "take_snapshot" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                showToast('快照拍摄成功');
+                addSnapshot(data.snapshot_key);
+            } else {
+                throw new Error(data.message);
+            }
+        } catch (error) {
+            console.error('拍摄快照失败:', error);
+            showToast('拍摄失败: ' + error.message, true);
+        }
+    }
+
+    // 切换目标检测
+    async function toggleDetection() {
+        try {
+            const response = await fetch('{% url "toggle_detection" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                isDetectionEnabled = data.detection_enabled;
+                updateDetectionStatus(isDetectionEnabled);
+                showToast(data.message);
+            } else {
+                throw new Error(data.message);
+            }
+        } catch (error) {
+            // console.error('切换检测失败:', error);
+            // showToast('操作失败: ' + error.message, true);
+        }
+    }
+
+    // 切换自动保存
+    async function toggleAutoSave() {
+        try {
+            const response = await fetch('{% url "toggle_auto_save" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                isAutoSaveEnabled = data.auto_save_enabled;
+                updateAutoSaveStatus(isAutoSaveEnabled);
+                showToast(data.message);
+            } else {
+                throw new Error(data.message);
+            }
+        } catch (error) {
+            // console.error('切换自动保存失败:', error);
+            // showToast('操作失败: ' + error.message, true);
+        }
+    }
+
+    // 设置保存间隔
+    async function setSaveInterval() {
+        try {
+            const intervalInput = document.getElementById('saveInterval');
+            const interval = parseInt(intervalInput.value);
+            
+            if (interval < 1 || interval > 10) {
+                showToast('保存间隔必须在1-10秒之间', true);
+                return;
+            }
+
+            const response = await fetch('{% url "set_save_interval" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ interval: interval })
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                showToast(data.message);
+            } else {
+                throw new Error(data.message);
+            }
+        } catch (error) {
+            console.error('设置保存间隔失败:', error);
+            showToast('设置失败: ' + error.message, true);
+        }
+    }
+
+    // 检查检测状态
+    async function checkDetectionStatus() {
+        try {
+            const response = await fetch('{% url "get_detection_info" %}');
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                const info = data.data;
+                isDetectionEnabled = info.detection_enabled;
+                isAutoSaveEnabled = info.auto_save_enabled;
+                
+                updateDetectionStatus(isDetectionEnabled);
+                updateAutoSaveStatus(isAutoSaveEnabled);
+                updateDetectionInfo(info);
+                
+                if (!info.model_loaded) {
+                    showToast('YOLOv10模型加载失败', true);
+                }
+            } else {
+                throw new Error(data.message);
+            }
+        } catch (error) {
+            // console.error('获取检测状态失败:', error);
+        }
+    }
+
+    // 更新检测状态显示
+    function updateDetectionStatus(enabled) {
+        const toggleDetectionBtn = document.getElementById('toggleDetection');
+        const detectionStatusText = document.getElementById('detectionStatusText');
+        const detectionResults = document.getElementById('detectionResults');
+
+        if (enabled) {
+            toggleDetectionBtn.innerHTML = '<span>🔍</span> 关闭目标检测';
+            toggleDetectionBtn.className = 'btn btn-warning active';
+            detectionStatusText.textContent = '已开启';
+            detectionStatusText.style.color = '#28a745';
+            detectionResults.style.display = 'block';
+        } else {
+            toggleDetectionBtn.innerHTML = '<span>🔍</span> 开启目标检测';
+            toggleDetectionBtn.className = 'btn btn-warning';
+            detectionStatusText.textContent = '未开启';
+            detectionStatusText.style.color = '#6c757d';
+            detectionResults.style.display = 'none';
+        }
+    }
+
+    // 更新自动保存状态显示
+    function updateAutoSaveStatus(enabled) {
+        const toggleAutoSaveBtn = document.getElementById('toggleAutoSave');
+        const autoSaveStatusText = document.getElementById('autoSaveStatusText');
+        const autoSaveIndicator = document.getElementById('autoSaveIndicator');
+
+        if (enabled) {
+            toggleAutoSaveBtn.innerHTML = '<span>💾</span> 关闭自动保存';
+            toggleAutoSaveBtn.className = 'btn btn-success active';
+            autoSaveStatusText.textContent = '已开启';
+            autoSaveStatusText.style.color = '#28a745';
+            autoSaveIndicator.textContent = '✅';
+        } else {
+            toggleAutoSaveBtn.innerHTML = '<span>💾</span> 开启自动保存';
+            toggleAutoSaveBtn.className = 'btn btn-success';
+            autoSaveStatusText.textContent = '未开启';
+            autoSaveStatusText.style.color = '#6c757d';
+            autoSaveIndicator.textContent = '❌';
+        }
+    }
+
+    // 更新检测信息
+    function updateDetectionInfo(info) {
+        document.getElementById('detectionCount').textContent = info.detection_count || 0;
+        document.getElementById('savedCount').textContent = info.saved_images_count || 0;
+        document.getElementById('totalSavedCount').textContent = info.saved_images_count || 0;
+        document.getElementById('modelStatus').textContent = info.model_loaded ? '已加载' : '未加载';
+        document.getElementById('saveInterval').value = info.save_interval || 2;
+    }
+
+    // 加载已保存的图片
+    async function loadSavedImages() {
+        try {
+            const response = await fetch('{% url "get_detection_info" %}');
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                updateDetectionInfo(data.data);
+                // 这里可以添加加载具体图片列表的功能
+                // 实际项目中可能需要一个专门的API来获取保存的图片列表
+            }
+        } catch (error) {
+            console.error('加载保存的图片失败:', error);
+        }
+    }
+
+    // 刷新保存的图片
+    function refreshSavedImages() {
+        loadSavedImages();
+        showToast('已刷新图片列表');
+    }
+
+    // 清空所有保存的图片
+    async function clearAllSavedImages() {
+        if (!confirm('确定要清空所有自动保存的图片吗？此操作不可恢复！')) {
+            return;
+        }
+
+        try {
+            // 这里需要实现清空图片的后端API
+            // 暂时显示提示
+            showToast('清空功能开发中...');
+        } catch (error) {
+            console.error('清空图片失败:', error);
+            showToast('清空失败: ' + error.message, true);
+        }
+    }
+
+    // 添加快照到界面
+    function addSnapshot(snapshotKey) {
+        if (snapshotKeys.has(snapshotKey)) return;
+
+        snapshotKeys.add(snapshotKey);
+
+        const snapshotUrl = `{% url 'get_snapshot' '0' %}`.replace('0', snapshotKey);
+        const timestamp = new Date().toLocaleString();
+
+        const snapshotItem = document.createElement('div');
+        snapshotItem.className = 'snapshot-item';
+        snapshotItem.innerHTML = `
+            <img src="${snapshotUrl}" alt="快照 ${timestamp}" loading="lazy">
+            <div class="snapshot-info">
+                <div class="snapshot-time">${timestamp}</div>
+                ${isDetectionEnabled ? '<div class="detection-badge">AI检测</div>' : ''}
+            </div>
+            <div class="snapshot-actions">
+                <button class="snapshot-btn" onclick="downloadSnapshot('${snapshotKey}')" title="下载">💾</button>
+                <button class="snapshot-btn" onclick="deleteSnapshot(this, '${snapshotKey}')" title="删除">🗑️</button>
+            </div>
+        `;
+
+        document.getElementById('snapshotContainer').prepend(snapshotItem);
+    }
+
+    // 下载快照
+    function downloadSnapshot(snapshotKey) {
+        const link = document.createElement('a');
+        link.href = `{% url 'get_snapshot' '0' %}`.replace('0', snapshotKey);
+        link.download = `snapshot_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // 删除快照
+    function deleteSnapshot(button, snapshotKey) {
+        const snapshotItem = button.closest('.snapshot-item');
+        snapshotItem.remove();
+        snapshotKeys.delete(snapshotKey);
+    }
+
+    // 全屏显示
+    function toggleFullscreen() {
+        const videoContainer = document.querySelector('.video-container');
+
+        if (!document.fullscreenElement) {
+            if (videoContainer.requestFullscreen) {
+                videoContainer.requestFullscreen();
+            }
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+    }
+
+    // 检查摄像头状态
+    async function checkCameraStatus() {
+        if (!isCameraRunning) return;
+
+        try {
+            const response = await fetch('{% url "camera_status" %}');
+            const status = await response.json();
+
+            updateStatus(true, status.has_frame);
+
+            // 计算 FPS
+            frameCount++;
+            const currentTime = Date.now();
+            if (currentTime - lastTime >= 1000) {
+                fps = frameCount;
+                frameCount = 0;
+                lastTime = currentTime;
+                document.getElementById('fpsCounter').textContent = fps;
+            }
+
+            // 定期更新检测信息
+            if (frameCount % 30 === 0) { // 每30帧更新一次
+                checkDetectionStatus();
+            }
+
+            // 继续检查状态
+            setTimeout(checkCameraStatus, 1000);
+        } catch (error) {
+            console.error('检查状态失败:', error);
+            updateStatus(false);
+        }
+    }
+
+    // 获取 CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // 视频流错误处理
+    document.getElementById('videoFeed').onerror = function() {
+        if (isCameraRunning) {
+            showToast('视频流加载失败', true);
+            updateStatus(true, false);
+        }
+    };
+
+    document.getElementById('videoFeed').onload = function() {
+        if (isCameraRunning) {
+            updateStatus(true, true);
+        }
+    };
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        updateStatus(false);
+        // 初始检查状态
+        checkCameraStatus();
+    });
+
+    // 显示Toast消息
+    function showToast(message, isError = false) {
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: ${isError ? '#dc3545' : '#28a745'};
+            color: white;
+            border-radius: 5px;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        `;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => {
+                toast.remove();
+            }, 300);
+        }, 3000);
+    }
+</script>
+
+<style>
+    /* 新增样式 */
+    .btn-warning {
+        background: #ffc107;
+        color: #212529;
+        border: 1px solid #ffc107;
+    }
+    
+    .btn-warning:hover {
+        background: #e0a800;
+        border-color: #e0a800;
+    }
+    
+    .btn-warning.active {
+        background: #dc3545;
+        color: white;
+        border-color: #dc3545;
+    }
+    
+    .btn-info {
+        background: #17a2b8;
+        color: white;
+        border: 1px solid #17a2b8;
+    }
+    
+    .btn-info:hover {
+        background: #138496;
+        border-color: #138496;
+    }
+    
+    .btn-success {
+        background: #28a745;
+        color: white;
+        border: 1px solid #28a745;
+    }
+    
+    .btn-success:hover {
+        background: #218838;
+        border-color: #218838;
+    }
+    
+    .btn-success.active {
+        background: #dc3545;
+        color: white;
+        border-color: #dc3545;
+    }
+    
+    .btn-small {
+        padding: 4px 8px;
+        font-size: 12px;
+        margin-left: 5px;
+    }
+    
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+        border: 1px solid #dc3545;
+    }
+    
+    .btn-danger:hover {
+        background: #c82333;
+        border-color: #c82333;
+    }
+    
+    .control-panel {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 20px 0;
+    }
+    
+    .panel-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .setting-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .interval-input {
+        width: 60px;
+        padding: 4px 8px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        text-align: center;
+    }
+    
+    .stats-group {
+        display: flex;
+        gap: 15px;
+    }
+    
+    .stat-item {
+        padding: 5px 10px;
+        background: white;
+        border-radius: 4px;
+        border: 1px solid #e9ecef;
+        font-size: 14px;
+    }
+    
+    .detection-results {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 20px 0;
+    }
+    
+    .detection-stats {
+        display: flex;
+        gap: 20px;
+        font-size: 14px;
+    }
+    
+    .detection-stats div {
+        padding: 5px 10px;
+        background: white;
+        border-radius: 4px;
+        border: 1px solid #e9ecef;
+    }
+    
+    .snapshot-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 5px;
+    }
+    
+    .detection-badge {
+        background: #28a745;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+    }
+    
+    .saved-images {
+        margin-top: 30px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+    }
+    
+    .saved-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    
+    .saved-stats {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+    }
+    
+    .saved-images-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 15px;
+    }
+    
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+    
+    /* 响应式设计 */
+    @media (max-width: 768px) {
+        .panel-content {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .stats-group {
+            flex-wrap: wrap;
+        }
+        
+        .detection-stats {
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .controls {
+            flex-wrap: wrap;
+        }
+        
+        .controls .btn {
+            flex: 1 1 45%;
+            margin: 5px;
+        }
+    }
+</style>
+{% endblock %}
